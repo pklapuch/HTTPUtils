@@ -38,9 +38,7 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
         let task = Task {
             async let firstResult = await resultForExecute(sut: sut, request: firstRequest)
             async let ssecondResult = await resultForExecute(sut: sut, request: secondRequest)
-            
-            let results = await [firstResult, ssecondResult]
-            return results
+            return await [firstResult, ssecondResult]
         }
         
         await fulfillment(of: [firstRequestHitNetworkExp, secondRequestHitNetworkExp], timeout: 1.0)
