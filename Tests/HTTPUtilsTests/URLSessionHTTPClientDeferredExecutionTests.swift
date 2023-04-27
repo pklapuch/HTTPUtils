@@ -23,9 +23,7 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
     ///
     func test_execute_whenAnotherRequestIsAlreadyExecuting_triggersLatestRequestConcurrently() async {
         let firstRequest = anyRequest(url: URL(string: "https://firstRequest.com")!)
-        let secondRequset = anyRequest(url: URL(string: "https://secondRequest.com")!)
-        let anyNetworkFailureStub = URLProtocolWithDeferredCompletionSpy.Stub(data: nil, response: nil, error: anyNSError())
-        
+        let secondRequest = anyRequest(url: URL(string: "https://secondRequest.com")!)
         let sut = makeSUT()
         
         let firstRequestHitNetworkExp = expectation(description: "wait for first request to hit network")
@@ -33,28 +31,27 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
         
         URLProtocolWithDeferredCompletionSpy.observeStartLoading { request in
             if request.url == firstRequest.url { firstRequestHitNetworkExp.fulfill() }
-            else if request.url == secondRequset.url { secondRequestHitNetworkExp.fulfill() }
+            else if request.url == secondRequest.url { secondRequestHitNetworkExp.fulfill() }
         }
         
-        let firstRequestCompletedExp = expectation(description: "first request completed")
-        let secondRequestCompletedExp = expectation(description: "second request completed")
-        
-        Task {
-            _ = try? await sut.execute(request: firstRequest)
-            firstRequestCompletedExp.fulfill()
-        }
-        
-        Task {
-            _ = try? await sut.execute(request: secondRequset)
-            secondRequestCompletedExp.fulfill()
+        var receivedResults = [HTTPClient.Result]()
+        let task = Task {
+            async let firstResult = await resultForExecute(sut: sut, request: firstRequest)
+            async let ssecondResult = await resultForExecute(sut: sut, request: secondRequest)
+            
+            let results = await [firstResult, ssecondResult]
+            return results
         }
         
         await fulfillment(of: [firstRequestHitNetworkExp, secondRequestHitNetworkExp], timeout: 1.0)
+        XCTAssertTrue(receivedResults.isEmpty, "expected that none of the requests completed, but got some results: \(receivedResults)")
         
-        URLProtocolWithDeferredCompletionSpy.complete(with: anyNetworkFailureStub, at: 0)
-        URLProtocolWithDeferredCompletionSpy.complete(with: anyNetworkFailureStub, at: 1)
+        task.cancel()
         
-        await fulfillment(of: [firstRequestCompletedExp, secondRequestCompletedExp], timeout: 1.0)
+        receivedResults = await task.value
+        XCTAssertEqual(receivedResults.count, 2)
+        XCTAssertEqual(receivedResults.first?.nsError?.code, URLError.cancelled.rawValue)
+        XCTAssertEqual(receivedResults.last?.nsError?.code, URLError.cancelled.rawValue)
     }
     
     /// I think this test is redundant - basically there's no way to `free` a `SUT` as long as it's waiting for `await` to complete...
@@ -110,5 +107,22 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
         let sut = URLSessionHTTPClient(session: .shared)
         trackForMmeoryLeaks(sut, file: file, line: line)
         return sut
+    }
+    
+    private func resultForExecute(sut: HTTPClient, request: URLRequest, file: StaticString = #file, line: UInt = #line) async -> HTTPClient.Result {
+        do {
+            return .success(try await sut.execute(request: request))
+        } catch {
+            return .failure(error)
+        }
+    }
+}
+
+private extension HTTPClient.Result {
+    var nsError: NSError? {
+        switch self {
+        case let .failure(error as NSError?): return error
+        default: return nil
+        }
     }
 }
