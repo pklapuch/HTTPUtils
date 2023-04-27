@@ -4,12 +4,12 @@ import HTTPUtils
 final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
     override func setUp() {
         super.setUp()
-        URLProtocolWithContinuationSpy.startInterceptingRequests()
+        URLProtocolWithDeferredCompletionSpy.startInterceptingRequests()
     }
     
     override func tearDown() {
         super.tearDown()
-        URLProtocolWithContinuationSpy.stopInterceptingRequests()
+        URLProtocolWithDeferredCompletionSpy.stopInterceptingRequests()
     }
     
     /// Use case:
@@ -24,14 +24,14 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
     func test_execute_whenAnotherRequestIsAlreadyExecuting_triggersLatestRequestConcurrently() async {
         let firstRequest = anyRequest(url: URL(string: "https://firstRequest.com")!)
         let secondRequset = anyRequest(url: URL(string: "https://secondRequest.com")!)
-        let anyNetworkFailureStub = URLProtocolWithContinuationSpy.Stub(data: nil, response: nil, error: anyNSError())
+        let anyNetworkFailureStub = URLProtocolWithDeferredCompletionSpy.Stub(data: nil, response: nil, error: anyNSError())
         
         let sut = makeSUT()
         
         let firstRequestHitNetworkExp = expectation(description: "wait for first request to hit network")
         let secondRequestHitNetworkExp = expectation(description: "wait for first request to hit network")
         
-        URLProtocolWithContinuationSpy.observeStartLoading { request in
+        URLProtocolWithDeferredCompletionSpy.observeStartLoading { request in
             if request.url == firstRequest.url { firstRequestHitNetworkExp.fulfill() }
             else if request.url == secondRequset.url { secondRequestHitNetworkExp.fulfill() }
         }
@@ -51,8 +51,8 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
         
         await fulfillment(of: [firstRequestHitNetworkExp, secondRequestHitNetworkExp], timeout: 1.0)
         
-        URLProtocolWithContinuationSpy.complete(with: anyNetworkFailureStub, at: 0)
-        URLProtocolWithContinuationSpy.complete(with: anyNetworkFailureStub, at: 1)
+        URLProtocolWithDeferredCompletionSpy.complete(with: anyNetworkFailureStub, at: 0)
+        URLProtocolWithDeferredCompletionSpy.complete(with: anyNetworkFailureStub, at: 1)
         
         await fulfillment(of: [firstRequestCompletedExp, secondRequestCompletedExp], timeout: 10.0)
     }

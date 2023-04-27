@@ -1,5 +1,5 @@
 //
-//  URLProtocolWithContinuationSpy.swift
+//  URLProtocolWithDeferredCompletionSpy.swift
 //
 //
 //  Created by Pawel Klapuch on 4/26/23.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-class URLProtocolWithContinuationSpy: URLProtocol {
+class URLProtocolWithDeferredCompletionSpy: URLProtocol {
     private static var completions = [((Stub) -> Void)]()
     private static var onStartLoading: ((URLRequest) -> Void)?
     
@@ -70,4 +70,3 @@ class URLProtocolWithContinuationSpy: URLProtocol {
     
     override func stopLoading() { }
 }
-
