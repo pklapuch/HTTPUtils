@@ -58,6 +58,7 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
     }
     
     /// I think this test is redundant - basically there's no way to `free` a `SUT` as long as it's waiting for `await` to complete...
+    /// So a stubbed version would do just fine.
     ///
     func test_execute_instanceDoesNotDeallocateUnlessExecuteCompletes() async {
         let request = anyRequest(url: anyURL())
