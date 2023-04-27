@@ -29,7 +29,7 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
         let sut = makeSUT()
         
         let firstRequestHitNetworkExp = expectation(description: "wait for first request to hit network")
-        let secondRequestHitNetworkExp = expectation(description: "wait for first request to hit network")
+        let secondRequestHitNetworkExp = expectation(description: "wait for second request to hit network")
         
         URLProtocolWithDeferredCompletionSpy.observeStartLoading { request in
             if request.url == firstRequest.url { firstRequestHitNetworkExp.fulfill() }
