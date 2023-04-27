@@ -54,7 +54,51 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
         URLProtocolWithDeferredCompletionSpy.complete(with: anyNetworkFailureStub, at: 0)
         URLProtocolWithDeferredCompletionSpy.complete(with: anyNetworkFailureStub, at: 1)
         
-        await fulfillment(of: [firstRequestCompletedExp, secondRequestCompletedExp], timeout: 10.0)
+        await fulfillment(of: [firstRequestCompletedExp, secondRequestCompletedExp], timeout: 1.0)
+    }
+    
+    func test_execute_instanceDoesNotDeallocateUnlessExecuteCompletes() async {
+        let request = anyRequest(url: anyURL())
+        
+        weak var weakSUT: URLSessionHTTPClient?
+        let assignSUTToWeakProperty: ((URLSessionHTTPClient?) -> Void)? = { weakSUT = $0 }
+        let getWeakSUT: () -> URLSessionHTTPClient? = { return weakSUT }
+        
+        let taskCompletedExp = expectation(description: "wait for task completion")
+        let requestHitNetworkExp = expectation(description: "wait for request to hit network")
+        let requestWasCancelledExp = expectation(description: "wait for request cancellation")
+        
+        Task {
+            var sut: URLSessionHTTPClient? = URLSessionHTTPClient()
+            assignSUTToWeakProperty?(sut)
+            trackForMmeoryLeaks(sut!)
+            
+            URLProtocolWithDeferredCompletionSpy.observeStartLoading { _ in
+                requestHitNetworkExp.fulfill()
+            }
+
+            let executeTask = Task { [sut] in
+                _ = try await sut!.execute(request: request)
+            }
+            
+            await fulfillment(of: [requestHitNetworkExp], timeout: 1.0)
+            executeTask.cancel()
+            sut = nil
+            
+            /// `executeTask` was cancelled -> let's give it a moment and see if it completes...
+            ///  This is not ideal, but it works for now
+            DispatchQueue.global().asyncAfter(deadline: .now() + 0.01, execute: {
+                requestWasCancelledExp.fulfill()
+            })
+            
+            XCTAssertNotNil(getWeakSUT(), "expected `sut` to still be around, but it was deallocated")
+            await fulfillment(of: [requestWasCancelledExp], timeout: 1.0)
+            
+            taskCompletedExp.fulfill()
+        }
+
+        await fulfillment(of: [taskCompletedExp], timeout: 1.0)
+        XCTAssertNil(weakSUT, "expected `sut` to have been deallocated, but it still exists")
     }
 
     // MARK: - Helpers
