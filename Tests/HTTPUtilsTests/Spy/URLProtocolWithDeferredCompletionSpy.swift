@@ -44,6 +44,7 @@ class URLProtocolWithDeferredCompletionSpy: URLProtocol {
     }
     
     override func startLoading() {
+        print("started loading: \(request.url?.absoluteString ?? "--")")
         let completion: (Stub) -> Void = { stub in
             self.completeLoading(with: stub)
         }
@@ -65,6 +66,7 @@ class URLProtocolWithDeferredCompletionSpy: URLProtocol {
             client?.urlProtocol(self, didFailWithError: error)
         }
         
+        print("stopped loading: \(request.url?.absoluteString ?? "--")")
         client?.urlProtocolDidFinishLoading(self)
     }
     

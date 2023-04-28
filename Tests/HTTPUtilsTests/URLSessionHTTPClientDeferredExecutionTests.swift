@@ -27,7 +27,7 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
         let sut = makeSUT()
         
         let firstRequestHitNetworkExp = expectation(description: "wait for first request to hit network")
-        let secondRequestHitNetworkExp = expectation(description: "wait for second request to hit network")
+        let secondRequestHitNetworkExp = expectation(description: "wait for second request to hit network (while first request is still executing)")
         
         URLProtocolWithDeferredCompletionSpy.observeStartLoading { request in
             if request.url == firstRequest.url { firstRequestHitNetworkExp.fulfill() }
@@ -38,7 +38,8 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
         let task = Task {
             async let firstResult = await resultForExecute(sut: sut, request: firstRequest)
             async let ssecondResult = await resultForExecute(sut: sut, request: secondRequest)
-            return await [firstResult, ssecondResult]
+            let results = await [firstResult, ssecondResult]
+            return results
         }
         
         await fulfillment(of: [firstRequestHitNetworkExp, secondRequestHitNetworkExp], timeout: 1.0)
@@ -102,7 +103,7 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
     // MARK: - Helpers
     
     private func makeSUT(file: StaticString = #file, line: UInt = #line) -> HTTPClient {
-        let sut = URLSessionHTTPClient(session: .shared)
+        let sut = SerialURLSessionHTTPClient(session: .shared)
         trackForMmeoryLeaks(sut, file: file, line: line)
         return sut
     }
