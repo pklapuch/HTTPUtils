@@ -12,6 +12,8 @@ public actor SerialURLSessionHTTPClient: HTTPClient {
     
     private let session: URLSession
     private var operations = [CancellableOperation]()
+    
+    private var currentTaskID: UUID?
     private var currentTask: Task<Void, Never>?
     
     public struct UnexpectedResponseRepresentation: Error {
@@ -23,7 +25,8 @@ public actor SerialURLSessionHTTPClient: HTTPClient {
     }
     
     public func execute(request: URLRequest) async throws -> Response {
-        let operation = CancellableOperation(session: session, request: request)
+        let uuid = UUID()
+        let operation = CancellableOperation(uuid: uuid, session: session, request: request)
         operations.append(operation)
         
         return try await withTaskCancellationHandler(operation: {
@@ -34,12 +37,7 @@ public actor SerialURLSessionHTTPClient: HTTPClient {
                 }
             }
         }, onCancel: {
-            Task {
-                await currentTask?.cancel()
-                for operation in (await operations) {
-                    await operation.cancel()
-                }
-            }
+            Task { await didCancelTask(with: uuid) }
         })
     }
     
@@ -48,11 +46,20 @@ public actor SerialURLSessionHTTPClient: HTTPClient {
         guard !operations.isEmpty else { return }
         
         let operation = operations.removeFirst()
-        
+        currentTaskID = operation.uuid
         currentTask = Task {
             await operation.start()
             currentTask = nil
             startNextOperation()
+        }
+    }
+    
+    private func didCancelTask(with id: UUID) async {
+        if currentTaskID == id {
+            currentTask?.cancel()
+        } else if let index = operations.firstIndex(where: { $0.uuid == id }) {
+            await operations[index].cancel()
+            operations.remove(at: index)
         }
     }
 
@@ -68,14 +75,15 @@ public actor SerialURLSessionHTTPClient: HTTPClient {
 private actor CancellableOperation {
     private typealias URLSessionResponse = (data: Data, urlResponse: URLResponse)
     
+    let uuid: UUID
     private let session: URLSession
     private let request: URLRequest
     
     private var completed = false
     private var continuation: CheckedContinuation<HTTPClient.Response, Error>?
     
-    
-    init(session: URLSession, request: URLRequest) {
+    init(uuid: UUID, session: URLSession, request: URLRequest) {
+        self.uuid = uuid
         self.session = session
         self.request = request
     }
@@ -102,7 +110,6 @@ private actor CancellableOperation {
         guard !completed else { return }
         completed = true
         
-        print("cancel: \(request.url?.absoluteString ?? "--")")
         continuation?.resume(throwing: cancelledError)
     }
     

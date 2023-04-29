@@ -103,7 +103,7 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
     // MARK: - Helpers
     
     private func makeSUT(file: StaticString = #file, line: UInt = #line) -> HTTPClient {
-        let sut = SerialURLSessionHTTPClient(session: .shared)
+        let sut = URLSessionHTTPClient(session: .shared)
         trackForMmeoryLeaks(sut, file: file, line: line)
         return sut
     }
