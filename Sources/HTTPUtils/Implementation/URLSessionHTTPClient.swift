@@ -16,6 +16,6 @@ public class URLSessionHTTPClient: HTTPClient {
     
     public func execute(request: URLRequest) async throws -> Response {
         let response = try await session.data(for: request)
-        return try HTTPClientResponseUtil.parse(response)
+        return try HTTPClientResponseUtil.parse(rawResponse: response)
     }
 }

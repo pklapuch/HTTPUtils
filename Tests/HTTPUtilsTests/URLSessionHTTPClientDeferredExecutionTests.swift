@@ -102,12 +102,10 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
 
     // MARK: - Helpers
     
-    private func makeSUT(file: StaticString = #file, line: UInt = #line) -> HTTPClient {
-        return makeSUTWithClosureBasedClient(file: file, line: line)
-        
-//        let sut = URLSessionHTTPClient(session: .shared)
-//        trackForMmeoryLeaks(sut, file: file, line: line)
-//        return sut
+    private func makeSUT(file: StaticString = #file, line: UInt = #line) -> HTTPClient {        
+        let sut = URLSessionHTTPClient(session: .shared)
+        trackForMmeoryLeaks(sut, file: file, line: line)
+        return sut
     }
     
     private func makeSUTWithClosureBasedClient(file: StaticString = #file, line: UInt = #line) -> HTTPClient {

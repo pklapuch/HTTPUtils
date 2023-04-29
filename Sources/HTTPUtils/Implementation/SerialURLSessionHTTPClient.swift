@@ -86,7 +86,7 @@ private actor CancellableOperation {
         
         do {
             let response = try await session.data(for: request)
-            complete(with: .success(try HTTPClientResponseUtil.parse(response)))
+            complete(with: .success(try HTTPClientResponseUtil.parse(rawResponse: response)))
         } catch {
             complete(with: .failure(error))
         }

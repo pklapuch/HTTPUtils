@@ -15,15 +15,35 @@ public final class CBHTTPClientToHTTPClientAdapter: HTTPClient {
     }
     
     public func execute(request: URLRequest) async throws -> Response {
-        return try await withCheckedThrowingContinuation { continuation in
-            adaptee.execute(request: request) { result in
-                switch result {
-                case let .success(response):
-                    continuation.resume(returning: (response.data, response.httpResponse))
-                case let .failure(error):
-                    continuation.resume(throwing: error)
+        let wrapper = TaskWrapper()
+        
+        return try await withTaskCancellationHandler(operation: {
+            return try await withCheckedThrowingContinuation { continuation in
+                let task = adaptee.execute(request: request) { result in
+                    switch result {
+                    case let .success(response):
+                        continuation.resume(returning: (response.data, response.httpResponse))
+                    case let .failure(error):
+                        continuation.resume(throwing: error)
+                    }
                 }
+                
+                wrapper.set(task: task)
             }
+        }, onCancel: {
+            wrapper.cancel()
+        })
+    }
+    
+    private final class TaskWrapper {
+        private var task: CBHTTPTask?
+        
+        func set(task: CBHTTPTask) {
+            self.task = task
+        }
+        
+        func cancel() {
+            task?.cancel()
         }
     }
 }

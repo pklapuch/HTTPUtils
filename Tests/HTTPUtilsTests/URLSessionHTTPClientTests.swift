@@ -68,12 +68,10 @@ final class URLSessionNetworkGatewayTests: XCTestCase {
     
     // MARK: - Helpers
     
-    private func makeSUT(file: StaticString = #file, line: UInt = #line) -> HTTPClient {
-        return makeSUTWithClosureBasedClient(file: file, line: line)
-        
-//        let sut = SerialURLSessionHTTPClient()
-//        trackForMmeoryLeaks(sut, file: file, line: line)
-//        return sut
+    private func makeSUT(file: StaticString = #file, line: UInt = #line) -> HTTPClient {        
+        let sut = SerialURLSessionHTTPClient()
+        trackForMmeoryLeaks(sut, file: file, line: line)
+        return sut
     }
     
     private func makeSUTWithClosureBasedClient(file: StaticString = #file, line: UInt = #line) -> HTTPClient {

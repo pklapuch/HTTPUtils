@@ -16,13 +16,39 @@ public final class CBHTTPClientThreadDecorator: CBHTTPClient {
         self.queue = queue
     }
     
-    public func execute(request: URLRequest, completion: @escaping (Result<(data: Data, httpResponse: HTTPURLResponse), Error>) -> Void) {
+    public func execute(request: URLRequest, completion: @escaping (Result<(data: Data, httpResponse: HTTPURLResponse), Error>) -> Void) -> CBHTTPTask {
+        let wrapper = TaskWrapper()
+        
         queue.async { [weak self] in
-            self?.decoratee.execute(request: request) { result in
-                self?.queue.async {
+            guard let self = self else { return }
+            
+            guard !wrapper.cancelled else {
+                completion(.failure(NSError(domain: URLError.errorDomain, code: URLError.cancelled.rawValue)))
+                return
+            }
+            
+            let task = self.decoratee.execute(request: request) { result in
+                self.queue.async {
                     completion(result)
                 }
             }
+            wrapper.set(task: task)
+        }
+        
+        return wrapper
+    }
+    
+    private final class TaskWrapper: CBHTTPTask {
+        var cancelled = false
+        private var task: CBHTTPTask?
+        
+        func set(task: CBHTTPTask) {
+            self.task = task
+        }
+        
+        func cancel() {
+            cancelled = true
+            task?.cancel()
         }
     }
 }

@@ -15,26 +15,43 @@ public class CBURLSessionHTTPClient: CBHTTPClient {
     public init(session: URLSession = .shared) {
         self.session = session
     }
+    
+    final class Task: CBHTTPTask {
+        private var dataTask: URLSessionDataTask?
         
-    public func execute(request: URLRequest, completion: @escaping (CBHTTPClient.Result) -> Void) {
-        session.dataTask(with: request) { data, urlResponse, error in
+        init() { }
+        
+        func set(dataTask: URLSessionDataTask) {
+            self.dataTask = dataTask
+        }
+        
+        func resume() {
+            dataTask?.resume()
+        }
+        
+        func cancel() {
+            dataTask?.cancel()
+        }
+    }
+        
+    public func execute(request: URLRequest, completion: @escaping (CBHTTPClient.Result) -> Void) -> CBHTTPTask {
+        let dataTask = session.dataTask(with: request) { data, urlResponse, error in
             completion(Self.parse(data: data, urlResponse: urlResponse, error: error))
-        }.resume()
+        }
+        
+        let wrapper = Task()
+        wrapper.set(dataTask: dataTask)
+        wrapper.resume()
+        return wrapper
     }
     
     private static func parse(data: Data?, urlResponse: URLResponse?, error: Error?) -> CBHTTPClient.Result {
-        if let error = error {
-            return .failure(error)
-        } else {
-            return parse(data: data, urlResponse: urlResponse)
-        }
-    }
-
-    private static func parse(data: Data?, urlResponse: URLResponse?) -> CBHTTPClient.Result {
-        do {
-            let response = try HTTPClientResponseUtil.parse((data, urlResponse))
-            return .success((response.data, response.httpResponse))
-        } catch {
+        let result = HTTPClientResponseUtil.parse(data: data, urlResponse: urlResponse, error: error)
+        
+        switch result {
+        case let .success(response):
+            return .success(response)
+        case let .failure(error):
             return .failure(error)
         }
     }
