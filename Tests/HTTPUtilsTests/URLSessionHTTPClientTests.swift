@@ -38,7 +38,7 @@ final class URLSessionNetworkGatewayTests: XCTestCase {
     }
     
     func test_execute_deliversErrorOnNonHTTPURLResponse() async {
-        let expectedError = URLSessionHTTPClient.UnexpectedResponseRepresentation()
+        let expectedError = UnexpectedResponseRepresentation()
         let nonHTTPURLResponse = nonHTTPURLResponse()
         
         let receivedError = await resultErrorFor(data: nil, response: nonHTTPURLResponse, error: nil)
@@ -53,7 +53,7 @@ final class URLSessionNetworkGatewayTests: XCTestCase {
         let receivedResponse = await resultValuesFor(data: data, response: httpURLResponse, error: nil)
         
         XCTAssertEqual(receivedResponse?.data, data)
-        assertEqual(lhs: receivedResponse?.urlResponse, rhs: httpURLResponse)
+        assertEqual(lhs: receivedResponse?.httpResponse, rhs: httpURLResponse)
     }
     
     func test_execute_whenRequestCompletesWithNilData_deliversSuccessWithEmptyData() async {
@@ -63,14 +63,31 @@ final class URLSessionNetworkGatewayTests: XCTestCase {
         let response = await resultValuesFor(data: nil, response: httpURLResponse, error: nil)
         
         XCTAssertEqual(response?.data, emptyData)
-        assertEqual(lhs: response?.urlResponse, rhs: httpURLResponse)
+        assertEqual(lhs: response?.httpResponse, rhs: httpURLResponse)
     }
     
     // MARK: - Helpers
     
     private func makeSUT(file: StaticString = #file, line: UInt = #line) -> HTTPClient {
-        let sut = SerialURLSessionHTTPClient()
+        return makeSUTWithClosureBasedClient(file: file, line: line)
+        
+//        let sut = SerialURLSessionHTTPClient()
+//        trackForMmeoryLeaks(sut, file: file, line: line)
+//        return sut
+    }
+    
+    private func makeSUTWithClosureBasedClient(file: StaticString = #file, line: UInt = #line) -> HTTPClient {
+        let httpClient = CBURLSessionHTTPClient()
+        let httpClientThreadDecorator = CBHTTPClientThreadDecorator(decoratee: httpClient, queue: .main)
+        let cbSUT = CBSerialHTTPClient(httpClient: httpClientThreadDecorator)
+        let serialCBHttpClientThreadDecorator = CBHTTPClientThreadDecorator(decoratee: cbSUT, queue: .main)
+        let sut = CBHTTPClientToHTTPClientAdapter(adaptee: serialCBHttpClientThreadDecorator)
+        
+        trackForMmeoryLeaks(httpClient, file: file, line: line)
+        trackForMmeoryLeaks(httpClientThreadDecorator, file: file, line: line)
+        trackForMmeoryLeaks(cbSUT, file: file, line: line)
         trackForMmeoryLeaks(sut, file: file, line: line)
+        
         return sut
     }
 

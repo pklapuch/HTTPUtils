@@ -8,7 +8,7 @@
 import Foundation
 
 public protocol HTTPClient {
-    typealias Response = (data: Data, urlResponse: HTTPURLResponse)
+    typealias Response = (data: Data, httpResponse: HTTPURLResponse)
     typealias Result = Swift.Result<Response, Error>
     
     func execute(request: URLRequest) async throws -> Response

@@ -27,7 +27,7 @@ public actor Auth2HTTPClient: HTTPClient {
         let token = try await tokenProvider.getToken()
         let response = try await signAndExecute(request: request, withToken: token)
         
-        if response.urlResponse.statusCode == Config.expiredAccessTokenStatusCode {
+        if response.httpResponse.statusCode == Config.expiredAccessTokenStatusCode {
             let newToken = try await tokenProvider.refresh(token: token)
             return try await signAndExecute(request: request, withToken: newToken)
         } else {

@@ -14,7 +14,7 @@ extension XCTestCase {
                      file: StaticString = #file,
                      line: UInt = #line) {
         XCTAssertEqual(receivedResponse.data, expectedResponse.data, file: file, line: line)
-        XCTAssertEqual(receivedResponse.urlResponse.url, expectedResponse.urlResponse.url, file: file, line: line)
-        XCTAssertEqual(receivedResponse.urlResponse.statusCode, expectedResponse.urlResponse.statusCode, file: file, line: line)
+        XCTAssertEqual(receivedResponse.httpResponse.url, expectedResponse.httpResponse.url, file: file, line: line)
+        XCTAssertEqual(receivedResponse.httpResponse.statusCode, expectedResponse.httpResponse.statusCode, file: file, line: line)
     }
 }

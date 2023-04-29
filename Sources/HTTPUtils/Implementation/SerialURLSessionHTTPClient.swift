@@ -8,17 +8,11 @@
 import Foundation
 
 public actor SerialURLSessionHTTPClient: HTTPClient {
-    private typealias URLSessionResponse = (data: Data, urlResponse: URLResponse)
-    
     private let session: URLSession
     private var operations = [CancellableOperation]()
     
     private var currentTaskID: UUID?
     private var currentTask: Task<Void, Never>?
-    
-    public struct UnexpectedResponseRepresentation: Error {
-        public init() { }
-    }
     
     public init(session: URLSession = .shared) {
         self.session = session
@@ -62,14 +56,6 @@ public actor SerialURLSessionHTTPClient: HTTPClient {
             operations.remove(at: index)
         }
     }
-
-    private static func parse(_ resopnse: URLSessionResponse) throws -> Response {
-        guard let httpResponse = resopnse.urlResponse as? HTTPURLResponse else {
-            throw URLSessionHTTPClient.UnexpectedResponseRepresentation()
-        }
-        
-        return (resopnse.data, httpResponse)
-    }
 }
 
 private actor CancellableOperation {
@@ -100,7 +86,7 @@ private actor CancellableOperation {
         
         do {
             let response = try await session.data(for: request)
-            complete(with: .success(try Self.parse(response)))
+            complete(with: .success(try HTTPClientResponseUtil.parse(response)))
         } catch {
             complete(with: .failure(error))
         }
@@ -118,14 +104,6 @@ private actor CancellableOperation {
         completed = true
         
         continuation?.resume(with: result)
-    }
-
-    private static func parse(_ resopnse: (data: Data, urlResponse: URLResponse)) throws -> HTTPClient.Response {
-        guard let httpResponse = resopnse.urlResponse as? HTTPURLResponse else {
-            throw URLSessionHTTPClient.UnexpectedResponseRepresentation()
-        }
-        
-        return (resopnse.data, httpResponse)
     }
     
     private var cancelledError: Error {

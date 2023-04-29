@@ -103,8 +103,25 @@ final class URLSessionHTTPClientDeferredExecutionTests: XCTestCase {
     // MARK: - Helpers
     
     private func makeSUT(file: StaticString = #file, line: UInt = #line) -> HTTPClient {
-        let sut = URLSessionHTTPClient(session: .shared)
+        return makeSUTWithClosureBasedClient(file: file, line: line)
+        
+//        let sut = URLSessionHTTPClient(session: .shared)
+//        trackForMmeoryLeaks(sut, file: file, line: line)
+//        return sut
+    }
+    
+    private func makeSUTWithClosureBasedClient(file: StaticString = #file, line: UInt = #line) -> HTTPClient {
+        let httpClient = CBURLSessionHTTPClient()
+        let httpClientThreadDecorator = CBHTTPClientThreadDecorator(decoratee: httpClient, queue: .main)
+        let cbSUT = CBSerialHTTPClient(httpClient: httpClientThreadDecorator)
+        let serialCBHttpClientThreadDecorator = CBHTTPClientThreadDecorator(decoratee: cbSUT, queue: .main)
+        let sut = CBHTTPClientToHTTPClientAdapter(adaptee: serialCBHttpClientThreadDecorator)
+        
+        trackForMmeoryLeaks(httpClient, file: file, line: line)
+        trackForMmeoryLeaks(httpClientThreadDecorator, file: file, line: line)
+        trackForMmeoryLeaks(cbSUT, file: file, line: line)
         trackForMmeoryLeaks(sut, file: file, line: line)
+        
         return sut
     }
     
